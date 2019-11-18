@@ -83,20 +83,36 @@ This will do the same but result will be stored in json file.
 Scrapes information about all fighters in UFC current roster. You can store the outcome in .csv file, .json file or just in variable.
 It takes following arguments:
 
-* save - string (either 'yes' or 'no) *'no' is default
+* save - string (either 'yes' or 'no') *'no' is default*
 * filetype - string (csv or json) *None is default*
 
-Function will return dictionary containing two keys - men and women, each key contains list of tuples where each tuple represents the fighter in the following form (name, weight-division, nickname).
+Function will return dictionary containing two keys - men and women, each key contains list of tuples where each tuple represents the fighter in the following form (name, weight-division, nickname). 
+
+List of names for weight-divisions: 
+
+        "Heavyweight"
+        "Light Heavyweight"
+        "Middleweight"
+        "Welterweight"
+        "Lightweight"
+        "Featherweight"
+        "Bantamweight"
+        "Flyweight"
+        "Women's Strawweight"
+        "Women's Flyweight":
+        "Women's Bantamweight"
+        "Women's Featherweight"
+
 
 **Examples:**
 ```
-ufc = scrape_ufc_roster(save='no', filetype=None):
+ufc = scrape_ufc_roster(save='no', filetype=None)
 ```
 
 This one will scrape ufc roster information and assign returned dictionary to ufc variable.
 
 ```
-scrape_ufc_roster(save='yes', filetype='csv'):
+scrape_ufc_roster(save='yes', filetype='csv')
 ```
 
 This will scrape ufc roster and save output to csv file. Csv will be named *ufc-roster.csv* be default.
@@ -110,9 +126,38 @@ It takes following arguments:
 * filename - string
 * filetype - string (csv or json) *csv is default*                 
 
+**Examples:**
 
+```
+f_list = [('Jon Jones', 'Light Heavyweight', 'Bones'), ('Khabib Nurmagomedov, 'Lightweight', 'NA')]
+scrape_list_of_fighters(f_list, 'scraped_list', filetype='csv')
+```
 
+This will scrape fighters passed in f_list to *scraped_list.csv*.
 
+```
+scrape_list_of_fighters(ufc, 'ufc-roster', filetype='json')
+```
+
+This will scrape ufc roster assigned to ufc variable and save outcome to the *ufc-roster.json* file.
+
+### 4. helper_read_fighters_from_csv function
+
+Helper function to support assigning data stored in csv file to variable. Please note that csv file has to be a product of scrape_ufc_roster function or has to be arranged in the same manner.
+It takes following arguments:
+
+* filename - string
+* delimiter - string *',' is default*
+
+**Example:**
+
+```
+ufc_list_var = helper_read_fighters_from_csv(ufc-roster, delimiter=',')
+```
+
+Reads the ufc-roster.csv and returns list of fighters assigned to ufc_list_var variable.
+
+PS in repository location you can find regex.py file which i have used to deal with some messy data from sherdog. You will fid more information on how to use it inside the file.
 
 ## Wrap-Up
 
