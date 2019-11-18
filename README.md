@@ -1,5 +1,5 @@
 # MMA-parser-for-Sherdog-and-UFC-data
-Python web scraper for Sherdog &amp; UFC data. Creates output of your choice in .csv or .json format.    
+Python web scraper for Sherdog &amp; UFC data. Creates output of your choice in .csv or .json format.</br></br>  
 ![Sherdog logo](sherdog.jpg)  
 ![UFC logo](ufc.jpg)
 
