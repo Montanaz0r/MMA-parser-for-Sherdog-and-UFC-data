@@ -136,10 +136,10 @@ scrape_list_of_fighters(f_list, 'scraped_list', filetype='csv')
 This will scrape fighters passed in f_list to *scraped_list.csv*.
 
 ```
-scrape_list_of_fighters(ufc, 'ufc-roster', filetype='json')
+scrape_list_of_fighters(ufc['men'], 'ufc-roster', filetype='json')
 ```
 
-This will scrape ufc roster assigned to ufc variable and save outcome to the *ufc-roster.json* file.
+This will scrape all men from ufc roster assigned to ufc variable and save outcome to the *ufc-roster.json* file.
 
 ### 4. helper_read_fighters_from_csv function
 
@@ -157,7 +157,7 @@ ufc_list_var = helper_read_fighters_from_csv(ufc-roster, delimiter=',')
 
 Reads the ufc-roster.csv and returns list of fighters assigned to ufc_list_var variable.
 
-PS in repository location you can find regex.py file which i have used to deal with some messy data from sherdog. You will fid more information on how to use it inside the file.
+*PS in repository location you can find **regex.py** file which i have used to deal with some messy data from sherdog. You will fid more information on how to use it inside the file.*
 
 ## Wrap-Up
 
