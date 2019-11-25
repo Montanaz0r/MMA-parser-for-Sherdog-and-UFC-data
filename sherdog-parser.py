@@ -17,12 +17,11 @@ class Fighter(object):
     """Fighter class - creating fighter instance based on fighter's Sherdog profile.
     """
 
-    def __init__(self, url):
+    def __init__(self):
         """
         Initializes a Fighter instance.
-        :param url: Fighter's link to profile in www.sherdog.com
         """
-        self.url = url
+        self.url = None
         self.name = None  # str: fighter's name, None by default
         self.resource = None  # setting up resource based on url, None by default
         self.soup = None  # creating BeautifulSoup object, None by default
@@ -40,7 +39,23 @@ class Fighter(object):
         self.rounds = None  # list of str: rounds in which fights have ended
         self.time = None  # list of str: exact point of time in the round where fights have ended
 
-    def set_resource(self):
+    def _set_url_from_index(self, fighter_index):
+        """
+        Sets up url for fighter's instance.
+        :param fighter_index: integer with fighter's index
+        :return: None
+        """
+        self.url = f'https://www.sherdog.com/fighter/index?id={fighter_index}.'
+
+    def _set_url_from_selector(self, fighter_page):
+        """
+        Sets up url from css selector match.
+        :param fighter_page: css selector result
+        :return: None
+        """
+        self.url = f'http://wwww.sherdog.com{fighter_page}'
+
+    def _set_resource(self):
         """
         Sets up response object based on self.url value.
         :return: response object
@@ -49,7 +64,7 @@ class Fighter(object):
         self.resource = resource
         return resource
 
-    def set_soup(self):
+    def _set_soup(self):
         """
         Sets up soup for Fighter's instance using data provided in self.resource.
         :return: BeautifulSoup instance
@@ -342,6 +357,40 @@ class Fighter(object):
             json.dump(data, fighter_json, indent=4)
         print(f'JSON file was successfully overwritten for {self.name}!')
 
+    def scrape_fighter(self, filetype, filename, fighter_index=None, fighter_page=None):
+        """
+        :param filetype: string with either 'csv' or 'json' as a type of file where results will be stored.
+        :param filename: string with name of the file we want to save data to; file will be created with given name
+        :param fighter_index: optional - integer with fighter's index, or None
+        :param fighter_page: optional - css selector match with fighter's page, or None
+        :return: True for valid fighter's page and False if page was empty
+        """
+        if fighter_index is not None:
+            self._set_url_from_index(fighter_index)
+        elif fighter_page is not None:
+            self._set_url_from_selector(fighter_page)
+        else:
+            print("Error, please pass fighter's index, or fighter's page in order to proceed.")
+        self._set_resource()
+        self._set_soup()
+        if self.set_name() != AttributeError:  # checking if there is existing name for a fighter instance.
+            self.set_pro_fights()
+            self.grab_result_data()
+            self.grab_opponents()
+            self.grab_events_date()
+            self.grab_events()
+            self.grab_judges()
+            self.grab_method()
+            self.grab_rounds()
+            self.grab_time()
+            if self.get_validation() != TypeError:  # if there was an empty list while validating data,
+                if filetype == 'csv':               # fighter instance will be dropped.
+                    self.save_to_csv(filename)
+                elif filetype == 'json':
+                    self.save_to_json(filename)
+            return True
+        else:
+            return False
 
 # END OF FIGHTER CLASS
 
@@ -368,8 +417,8 @@ def scrape_all_fighters(filename, filetype='csv'):
     fail_counter = 0    # amount of 'empty' indexes in a row.
 
     while fail_counter <= 10:  # scraper will be done after there were 10 non-existing sites (indexes) in a row.
-        F = Fighter(f'https://www.sherdog.com/fighter/index?id={fighter_index}.')
-        scrapped_data = scrape_fighter(F, filetype, filename)
+        F = Fighter()          # creating fighter's instance object.
+        scrapped_data = F.scrape_fighter(filetype, filename, fighter_index=fighter_index)
         if scrapped_data is True:
             fail_counter = 0  # resetting fail counter after finding valid page(index) for a fighter.
         else:
@@ -465,6 +514,26 @@ def scrape_list_of_fighters(fighters_list, filename, filetype='csv'):
     :param filetype: string with either 'csv' or 'json' as a type of file where results will be stored. Default is 'csv'
     :return: None
     """
+    
+    def search_fighter(fighter_tuple):
+        """
+        Nested function that creates response objects for fighter based on the information included in fighter's tuple.
+        :param fighter_tuple: tuple that contains (name, weight-division, nickname) for certain fighter.
+        :return: list of four response objects [1, 2, 3, 4].
+                 1 - based only on fighter's name
+                 2 - based on fighter's name and weight class
+                 3 - based on fighter's name and nickname
+                 4 - based on fighter's name, nickname and weight class
+        """
+        res_1 = requests.get(f'https://www.sherdog.com/stats/fightfinder?SearchTxt={fighter_tuple[0]}')
+        res_2 = requests.get(f'https://www.sherdog.com/stats/fightfinder?SearchTxt={fighter_tuple[0]}'
+                             f'&weight={weight_classes[fighter_tuple[1]]}')
+        res_3 = requests.get(f'https://www.sherdog.com/stats/fightfinder?SearchTxt={fighter_tuple[0]}'
+                             f'+{fighter_tuple[2]}')
+        res_4 = requests.get(f'https://www.sherdog.com/stats/fightfinder?SearchTxt={fighter_tuple[0]}'
+                             f'+{fighter_tuple[2]}&weight={weight_classes[fighter_tuple[1]]}')
+
+        return [res_1, res_2, res_3, res_4]
 
     def soup_selector(request):
         """
@@ -473,19 +542,31 @@ def scrape_list_of_fighters(fighters_list, filename, filetype='csv'):
         :return: css selector
         """
         soup = BeautifulSoup(request.text, features='html.parser')
-        selector = soup.select('body > div.container > div:nth-child(3) > div.col_left > section:nth-child(2) > div > '
-                               'div.content.table > table')
-        return selector
+        css_selector = soup.select('body > div.container > div:nth-child(3) > div.col_left > section:nth-child(2) > '
+                                   'div > div.content.table > table')
+        return css_selector
+
+    def check_result(css_selector):
+        """
+        Nested function that makes checking for searching results based on css selector more convenient.
+        :param css_selector: css selector
+        :return: css selector's match, or IndexError if there is none
+        """
+        try:
+            result = css_selector[0].find_all('a')
+            return result
+        except IndexError:
+            return IndexError
 
     def create_fighter_instance(matching):
         """
-        Nested function that makes creating fighter's instance object more convenient.
+        Nested function that makes creating and scraping fighter's instance object more convenient.
         :param matching: css selector results
-        :return: fighter's instance object
+        :return: None
         """
         fighter_page = matching[0]['href']
-        F = Fighter(f'http://wwww.sherdog.com{fighter_page}')
-        return F
+        F = Fighter()
+        F.scrape_fighter(filetype, filename, fighter_page=fighter_page)
 
     weight_classes = {
         "Heavyweight": 2,
@@ -514,117 +595,76 @@ def scrape_list_of_fighters(fighters_list, filename, filetype='csv'):
             json.dump(json_init, fighter_json)
 
     for fighter in fighters_list:
-        search_fighter = requests.get(f'https://www.sherdog.com/stats/fightfinder?SearchTxt={fighter[0]}')
-        selector = soup_selector(search_fighter)
-        try:
-            results = selector[0].find_all('a')
-        except IndexError:
-            logging.info(
-                f'Error occurred with {fighter}, please check carefully if there is no mistake in fighter name!')
+        search_results = search_fighter(fighter)   # variable that stores different searching results.
+        find_fighter = search_results[0]           # assigning first result to variable.
+        selector = soup_selector(find_fighter)     # creating selector based on search result.
+        results = check_result(selector)           # checking if there is a valid outcome.
+        if results == IndexError:
+            logging.info(f'Error occurred with {fighter}, please check carefully '
+                         f'if there is no mistake in fighter name!')
         else:
             if len(results) == 1:
-                F = create_fighter_instance(results)
-                scrape_fighter(F, filetype, filename)
+                create_fighter_instance(results)         # creating Fighter's instance and saving it.
             else:
-                try:
-                    search_fighter = requests.get(f'https://www.sherdog.com/stats/fightfinder?SearchTxt={fighter[0]}'
-                                                  f'&weight={weight_classes[fighter[1]]}')
-                except IndexError:
+                find_fighter = search_results[1]         # assigning second result to variable.
+                selector = soup_selector(find_fighter)   # creating selector based on search result.
+                results = check_result(selector)         # checking if there is a valid outcome.
+                if results == IndexError:
                     try:
-                        search_fighter = requests.get(
-                            f'https://www.sherdog.com/stats/fightfinder?SearchTxt={fighter[0]}'
-                            f'+{fighter[2]}')
+                        find_fighter = search_results[2]         # assigning third result to variable.
                     except KeyError:
                         print('Search engine tried to narrow down findings by using weight-class filter, apparently '
                               'you have not specified weight-class data!')
                     else:
-                        selector = soup_selector(search_fighter)
-                        try:
-                            results = selector[0].find_all('a')
-                        except IndexError:
+                        selector = soup_selector(find_fighter)   # creating selector based on search result.
+                        results = check_result(selector)         # checking if there is a valid outcome.
+                        if results == IndexError:
                             logging.info(f'Error occured with {fighter}, please check carefully if there is no mistake '
                                          f'in nickname!')
                         else:
                             if len(results) == 1:
-                                F = create_fighter_instance(results)
-                                scrape_fighter(F, filetype, filename)
+                                create_fighter_instance(results)  # creating Fighter's instance and saving it.
                 else:
-                    selector = soup_selector(search_fighter)
-                    try:
-                        results = selector[0].find_all('a')
-                    except IndexError:
-                        logging.info(f'Error occurred with {fighter}, please check carefully if there is no mistake '
-                                     f'in weight class!')
+                    selector = soup_selector(find_fighter)        # creating selector based on search result.
+                    results = check_result(selector)              # checking if there is a valid outcome.
+                    if results == IndexError:
+                        logging.info(f'Error occured with {fighter}, please check carefully if there is no mistake '
+                                         f'in nickname!')
                     else:
                         if len(results) == 1:
-                            F = create_fighter_instance(results)
-                            scrape_fighter(F, filetype, filename)
+                            create_fighter_instance(results)      # creating Fighter's instance and saving it.
                         else:
                             try:
-                                search_fighter = requests.get(f'https://www.sherdog.com/stats/fightfinder?SearchTxt='
-                                                              f'{fighter[0]}+{fighter[2]}')
+                                find_fighter = search_results[2]  # assigning third result to variable.
                             except KeyError:
                                 print(f'Search engine tried to narrow down findings by name & nickname, apparently this'
                                       f'was not enough to find {fighter[0]}!')
                             else:
-                                selector = soup_selector(search_fighter)
-                                try:
-                                    results = selector[0].find_all('a')
-                                except IndexError:
+                                selector = soup_selector(find_fighter)  # creating selector based on search result.
+                                results = check_result(selector)        # checking if there is a valid outcome.
+                                if results == IndexError:
                                     logging.info(f'Error occurred with {fighter}, please check carefully '
                                                  f'- searching with name & nickname data was unsuccessful!')
                                 else:
                                     if len(results) == 1:
-                                        F = create_fighter_instance(results)
-                                        scrape_fighter(F, filetype, filename)
+                                        create_fighter_instance(results)  # creating Fighter's instance and saving it.
                                     else:
                                         try:
-                                            search_fighter = requests.get(f'https://www.sherdog.com/stats/fightfinder?'
-                                                                          f'SearchTxt={fighter[0]}+{fighter[2]}&weight='
-                                                                          f'{weight_classes[fighter[1]]}')
+                                            find_fighter = search_results[3]  # assigning fourth result to variable.
                                         except KeyError:
                                             print(f'Search engine tried to narrow down findings by using all filters, '
                                                   f'apparently this was not enough to find {fighter[0]}!')
                                         else:
-                                            selector = soup_selector(search_fighter)
-                                            try:
-                                                results = selector[0].find_all('a')
-                                            except IndexError:
+                                            # creating selector based on search result.
+                                            selector = soup_selector(find_fighter)
+                                            # checking if there is a valid outcome.
+                                            results = check_result(selector)
+                                            if results == IndexError:
                                                 logging.info(f'Error occurred with {fighter}, please check carefully '
                                                              f'- searching with all provided data was unsuccessful!')
                                             else:
-                                                F = create_fighter_instance(results)
-                                                scrape_fighter(F, filetype, filename)
-
-
-def scrape_fighter(F, filetype, filename):
-    '''
-    Function that helps scraping Fighter's instance in clean and neat way inside other functions.
-    :param F: Fighter instance object
-    :param filetype: string with either 'csv' or 'json' as a type of file where results will be stored.
-    :param filename: string with name of the file we want to save data to; file will be created with given name
-    :return: True for valid fighter's page and False if page was empty
-    '''
-    F.set_resource()
-    F.set_soup()
-    if F.set_name() != AttributeError:  # checking if there is existing name for a fighter instance.
-        F.set_pro_fights()
-        F.grab_result_data()
-        F.grab_opponents()
-        F.grab_events_date()
-        F.grab_events()
-        F.grab_judges()
-        F.grab_method()
-        F.grab_rounds()
-        F.grab_time()
-        if F.get_validation() != TypeError:  # if there was an empty list while validating data, fighter instance will
-            if filetype == 'csv':            # be dropped.
-                F.save_to_csv(filename)
-            elif filetype == 'json':
-                F.save_to_json(filename)
-        return True
-    else:
-        return False
+                                                # creating Fighter's instance and saving it.
+                                                create_fighter_instance(results)
 
 
 def helper_read_fighters_from_csv(filename, delimiter=','):
@@ -647,6 +687,9 @@ def helper_read_fighters_from_csv(filename, delimiter=','):
 
 if __name__ == '__main__':
     scrape_all_fighters('sherdog')
+
+
+
 
 
 
