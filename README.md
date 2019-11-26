@@ -159,7 +159,7 @@ ufc_list_var = helper_read_fighters_from_csv(ufc-roster, delimiter=',')
 
 Reads the ufc-roster.csv and returns list of fighters assigned to ufc_list_var variable.
 
-*PS in repository location you can find **regex.py** file which i have used to deal with some messy data from sherdog. You will fid more information on how to use it inside the file.*
+*PS in repository location you can find **regex.py** file which i have used to deal with some messy data from sherdog. You will find more information on how to use it, inside the file.*
 
 ## Wrap-Up
 
