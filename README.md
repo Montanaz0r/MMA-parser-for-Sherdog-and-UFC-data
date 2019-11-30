@@ -163,5 +163,5 @@ Reads the ufc-roster.csv and returns list of fighters assigned to ufc_list_var v
 
 ## Wrap-Up
 
-You may find docstrings to be helpful, make sure you read them before using.  
+You may find docstrings helpful, make sure you read them before using.  
 Please also make sure you are not violiting site's terms of use before you will scrape data!
