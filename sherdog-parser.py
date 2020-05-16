@@ -53,7 +53,7 @@ class Fighter(object):
         :param fighter_page: css selector result
         :return: None
         """
-        self.url = f'http://wwww.sherdog.com{fighter_page}'
+        self.url = f'http://www.sherdog.com{fighter_page}'
 
     def _set_resource(self):
         """
