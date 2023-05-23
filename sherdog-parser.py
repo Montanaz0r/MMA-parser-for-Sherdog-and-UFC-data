@@ -78,10 +78,10 @@ class Fighter(object):
         Sets up range of pro fights for Fighter instance with html code scraped from the site.
         :return: None
         """
-        not_selected = self.soup.find_all('div', class_='module fight_history')
-        for line in not_selected:
-            if line.div.h2.get_text() == 'Fight History - Pro':
-                pro_fights = line
+        all_sections = self.soup.find_all('section')
+        for section in all_sections:
+            if section.find('div', text='FIGHT HISTORY - PRO'):
+                pro_fights = section
                 self.pro_range = pro_fights
 
     def set_name(self):
