@@ -78,10 +78,10 @@ class Fighter(object):
         Sets up range of pro fights for Fighter instance with html code scraped from the site.
         :return: None
         """
-        not_selected = self.soup.find_all('div', class_='module fight_history')
-        for line in not_selected:
-            if line.div.h2.get_text() == 'Fight History - Pro':
-                pro_fights = line
+        all_sections = self.soup.find_all('section')
+        for section in all_sections:
+            if section.find('div', text='FIGHT HISTORY - PRO'):
+                pro_fights = section
                 self.pro_range = pro_fights
 
     def set_name(self):
@@ -104,7 +104,7 @@ class Fighter(object):
         try:
             finder = self.pro_range.find_all('span', class_='final_result')
             for result in finder:
-                results.append(result.get_text())
+                results.append(result.text)
         except AttributeError:
             logging.info(f'Attribute Error while grabbing result data for {self.name}, the data might be missing!')
         else:
@@ -119,8 +119,9 @@ class Fighter(object):
         fighters = []
         try:
             finder = self.pro_range.find_all('a')
-            for index in range(0, len(finder), 2):
-                fighters.append(finder[index].get_text())
+            for l in finder:
+                if '/fighter/' in l['href']:
+                    fighters.append(l.text)
         except AttributeError:
             logging.info(f'Attribute Error while grabbing opponent data for {self.name}, the data might be missing!')
         else:
@@ -135,8 +136,9 @@ class Fighter(object):
         events = []
         try:
             finder = self.pro_range.find_all('a')
-            for index in range(1, len(finder), 2):
-                events.append(finder[index].get_text())
+            for l in finder:
+                if '/events/' in l['href']:
+                    events.append(l.text)
         except AttributeError:
             logging.info(f'Attribute Error while grabbing event data for {self.name}, the data might be missing!')
         else:
@@ -151,8 +153,10 @@ class Fighter(object):
         events_date = []
         try:
             finder = self.pro_range.find_all('span', class_='sub_line')
-            for index in range(0, len(finder), 2):
-                events_date.append(finder[index].get_text())
+            for l in finder:
+                t = l.text
+                if ' / ' in t:
+                    events_date.append(t)
         except AttributeError:
             logging.info(f'Attribute Error while grabbing event dates for {self.name}, the data might be missing!')
         else:
@@ -166,9 +170,10 @@ class Fighter(object):
         """
         judges = []
         try:
-            finder = self.pro_range.find_all('span', class_='sub_line')
-            for index in range(1, len(finder), 2):
-                judges.append(finder[index].get_text())
+            finder = self.pro_range.find_all('a')
+            for l in finder:
+                if '/referee/' in l['href']:
+                    judges.append(l.text)
         except AttributeError:
             logging.info(f'Attribute Error while grabbing judges data for {self.name}, the data might be missing!')
         else:
@@ -264,7 +269,7 @@ class Fighter(object):
         :param filename: string with name of the file we want to save data to; file will be created with given name
         :return: None
         """
-        with open(f'{filename}.csv', 'a', newline='', encoding="ISO-8859-1") as csvfile:
+        with open(f'{filename}.csv', 'a', newline='', encoding="utf8") as csvfile:
             writer = csv.writer(csvfile, delimiter=';')
             for index in range(len(self.result_data)):
                 try:
@@ -403,7 +408,7 @@ def scrape_all_fighters(filename, filetype='csv'):
     :return: None
     """
     if filetype == 'csv':
-        headers = ['Fighter', 'Opponent', 'Result', 'Event', 'Event_date', 'Method', 'Referee', 'Round', 'Time']
+        headers = ['fighter', 'opponent', 'result', 'event', 'date', 'method', 'referee', 'round', 'time']
         with open(f'{filename}.csv', 'w', newline='') as csvfile:
             init_writer = csv.writer(csvfile, delimiter=',')
             init_writer.writerow(headers)
@@ -584,7 +589,7 @@ def scrape_list_of_fighters(fighters_list, filename, filetype='csv'):
     }
 
     if filetype == 'csv':
-        headers = ['Fighter', 'Opponent', 'Result', 'Event', 'Event_date', 'Method', 'Referee', 'Round', 'Time']
+        headers = ['fighter', 'opponent', 'result', 'event', 'date', 'method', 'referee', 'round', 'time']
         with open(f'{filename}.csv', 'w', newline='') as csvfile:
             init_writer = csv.writer(csvfile, delimiter=';')
             init_writer.writerow(headers)
